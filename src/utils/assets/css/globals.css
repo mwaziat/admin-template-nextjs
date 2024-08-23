@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import '~react-toastify/dist/ReactToastify.min.css';
+
+.App-navbar-logo {
+  height: 80px;
+  pointer-events: none;
+  object-fit: contain;
+}
