@@ -5,6 +5,7 @@ import { getSessionData, getUserAuth } from '@/app/api/utils/session';
 import sequelize from "@/DB/models/connection";
 import UsersRoles from "@/DB/models/usersroles";
 import { hashPassword } from "@/utils/auth";
+import { literal, Op } from "sequelize";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +13,20 @@ export async function GET() {
   try {
     const rows = await Users.findAll({
       attributes: { exclude: ['password'] },
+      where: {
+        deletedAt: {
+          [Op.is]: literal('null'),
+        },
+      },
       include: [
         {
           model: Roles,
           as: 'roles',
+          where: {
+            deletedAt: {
+              [Op.is]: literal('NULL'),
+            },
+          },
           through: {
             attributes: []
           }
@@ -53,7 +64,7 @@ export async function POST(req: NextRequest) {
           createdAt: new Date(),
           updatedAt: new Date()
         }));
-
+        console.log("userRoles", userRoles)
         await UsersRoles.bulkCreate(userRoles, { transaction });
       }
       await transaction.commit();
@@ -94,17 +105,25 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { id } = await req.json();
+    const data: UserUpdateAttributes & { id: number } = await req.json();
+    const { id, ...updateData } = data;
 
-    const row = await Users.findByPk(id);
+    const row = await Users.findOne({
+      where: {
+        id,
+        deletedAt: {
+          [Op.is]: literal('null'),
+        },
+      },
+    });
 
     if (!row) {
-      return NextResponse.json({ status: 0, message: "Data not found" });
+      return NextResponse.json({ status: 0, message: "Data user not found or already deleted" });
     }
 
-    await row.destroy();
+    await row.update({ deletedAt: new Date() });
+    return NextResponse.json({ status: 1, message: "Success delete data", data: row });
 
-    return NextResponse.json({ status: 1, message: "Data soft deleted", data: row });
   } catch (error) {
     if (error !== null && error instanceof Error) {
       return NextResponse.json({ status: 0, message: JSON.stringify(error.message) });

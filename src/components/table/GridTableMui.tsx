@@ -17,6 +17,7 @@ import CustomToolbarFilter from './DataTables/CustomToolbarFilter';
 import { defaultFilter } from './DataTables/component-filter/FormFilter';
 import { FilterGroup, FilterObject, FilterQueryGenerator } from '@/app/api/utils/sequelize-filter-generator';
 import { ViewData } from './queries';
+import { Logs } from '@/utils/logs';
 
 type dataToolbar = {
   isActive?: boolean
@@ -26,6 +27,7 @@ type dataToolbar = {
   param?: any
   customComponent?: React.ReactNode
   handleClick?: () => void
+  onDeleteClick?: (data: any) => void
 }
 
 type OpTypeFilter = '=' | '!=' | '>' | '<' | '>=' | '<=' | 'LIKE' | 'IN' | 'NOT IN' | 'IS NULL' | 'IS NOT NULL' | 'BETWEEN' | 'NOT BETWEEN' | 'ILIKE' | 'MATCH';
@@ -92,6 +94,7 @@ interface Props {
   columns: GridColDef[]
   checkboxSelection?: boolean
   isLoading?: boolean
+  isReload?: boolean
   toolbarDefault?: boolean
   toolbarAdd?: dataToolbar
   toolbarRefresh?: dataToolbar
@@ -265,7 +268,6 @@ const GridTableMui = (props: Props) => {
       if (props.rows !== undefined && props.serverSide === undefined) {
         setRows(props.rows)
       } else {
-        // TODO: Set Refreh serversite
         fetchData();
       }
       setTimeout(() => {
@@ -275,10 +277,10 @@ const GridTableMui = (props: Props) => {
   }
 
   const handleDeleteMany = React.useCallback(() => {
-    if (typeof props.toolbarDeleteMany?.handleClick === 'function' && props.toolbarDeleteMany?.handleClick !== undefined) {
+    if (typeof props.toolbarDeleteMany?.onDeleteClick === 'function' && props.toolbarDeleteMany?.onDeleteClick !== undefined) {
       if (props.checkboxSelection === true) {
         if (ids.length > 0) {
-          props.toolbarDeleteMany.handleClick()
+          props.toolbarDeleteMany.onDeleteClick(ids)
         } else {
           toast.warn(`You Can't deleted data, please select data`, {
             position: "top-right",
@@ -365,6 +367,7 @@ const GridTableMui = (props: Props) => {
       }
 
     } catch (error) {
+      Logs('Grid_Table_Mui', JSON.stringify(error))
       console.error('Failed to fetch data: ', props.serverSide?.path!, error);
       toast.error('Failed to fetch data server side');
     } finally {
@@ -378,43 +381,44 @@ const GridTableMui = (props: Props) => {
       operator: 'AND',
       filters: [],
     };
-
-    if (props.serverSide?.defaultFilters) {
-      const defaultFilterGroup: FilterGroup = {
-        operator: 'AND', // Assuming default filters are combined with AND, adjust as needed
-        attributes: props.serverSide.defaultFilters,
-      };
+    
+    if(filters.length > 0){
+      filters.forEach((item) => {
+        if (item.value === '' || item.field === '') {
+          filterQueryGenerator.filters = [];
+          return filterQueryGenerator;
+        }
   
-      filterQueryGenerator.filters.push(defaultFilterGroup);
+        let filterGroup = filterQueryGenerator.filters.find(
+          (group) => group.operator === item.logicOperator
+        );
+    
+        if (!filterGroup) {
+          filterGroup = {
+            operator: item.logicOperator === 'AND' ? 'AND' : 'OR',
+            attributes: [],
+          };
+          filterQueryGenerator.filters.push(filterGroup);
+        }
+  
+        filterGroup.attributes.push({
+          field: item.field,
+          op: item.operator as OpTypeFilter,
+          value: item.value,
+          type: item.type as typeFilter,
+        });
+      })
     }
   
-    filters.forEach((item) => {
-      if (item.value === '' || item.field === '') {
-        filterQueryGenerator.filters = [];
-        return filterQueryGenerator;
-      }
+    if (props.serverSide?.defaultFilters) {
+      const defaultFilterGroup: FilterGroup = {
+        operator: 'AND', 
+        attributes: props.serverSide.defaultFilters,
+      };
 
-      let filterGroup = filterQueryGenerator.filters.find(
-        (group) => group.operator === item.logicOperator
-      );
-  
-      if (!filterGroup) {
-        filterGroup = {
-          operator: item.logicOperator === 'AND' ? 'AND' : 'OR',
-          attributes: [],
-        };
-        filterQueryGenerator.filters.push(filterGroup);
-      }
-  
-      filterGroup.attributes.push({
-        field: item.field,
-        op: item.operator as OpTypeFilter,
-        value: item.value,
-        type: item.type as typeFilter,
-      });
-    });
-  
-    // Jika tidak ada filters yang valid, kembalikan array kosong
+      filterQueryGenerator.filters.push(defaultFilterGroup);
+    }
+
     if (filterQueryGenerator.filters.length === 0) {
       return {
         operator: 'AND',
@@ -436,6 +440,15 @@ const GridTableMui = (props: Props) => {
       fetchData();
     }
   }, [refreshServerSide]);
+
+  React.useEffect(() => {
+    if(props.isReload){
+      setTimeout(() => {
+        fetchData()
+      }, 100);
+    }
+  }, [props.isReload])
+
 
   return (
     <React.Fragment>

@@ -1,12 +1,12 @@
 "use client"
 import GridTableMui from '@/components/table/GridTableMui';
 import { RoleColumns } from '@/utils/columns/users-management/role';
-import React, { createContext, useEffect, useState } from 'react'
+import React, { createContext, useEffect, useState, useContext } from 'react'
 import AddRole from './form/add';
 import EditRole from './form/edit';
 import { DeleteConfirm } from '@/utils/sweet-alert';
 import { RoleAttributes } from '@/types/roles';
-import { DeleteData } from './queries';
+import { DeleteData, DeleteManyData } from './queries';
 
 interface RoleContextType {
   fetchData: () => void;
@@ -18,6 +18,7 @@ export const RoleContext = createContext<RoleContextType>({
 
 const Roles = () => {
   const [data, setData] = useState<any>([])
+  const [isReloadServer, setIsReloadServer] = useState(false)
 
   useEffect(() => {
     fetchData();
@@ -34,7 +35,31 @@ const Roles = () => {
   const handleDelete = async (row: RoleAttributes) => {
     try {
       const response = await DeleteData(row)
+
       if(response.status){
+        setIsReloadServer(true)
+        setTimeout(() => {
+          setIsReloadServer(false)
+        }, 100)
+        return true
+      } else {
+        return false
+      }
+    } catch (error) {
+      console.error("Error deleting:", error);
+      return false;
+    }
+  }
+
+  const handleDeleteMany = async (ids: number[]) => {
+    try {
+      const response = await DeleteManyData({ids: ids})
+
+      if(response.status){
+        setIsReloadServer(true)
+        setTimeout(() => {
+          setIsReloadServer(false)
+        }, 100)
         return true
       } else {
         return false
@@ -71,7 +96,8 @@ const Roles = () => {
           toolbarFilter={{ isActive: true }}
           toolbarRefresh={{ isActive: true }}
           checkboxSelection
-          toolbarDeleteMany={{ isActive: true, handleClick: () => console.log("Delete") }}
+          isReload={isReloadServer}
+          toolbarDeleteMany={{ isActive: true, onDeleteClick: (data: number[]) => handleDeleteMany(data) }}
           defaultColumnsAction={{
             isActive: true,
             isShowEditButton: true,

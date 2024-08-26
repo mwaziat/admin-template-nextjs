@@ -1,4 +1,4 @@
-import { ModelStatic, Op, FindOptions, literal, Order } from 'sequelize';
+import { ModelStatic, Op, FindOptions, literal, Order, IncludeOptions } from 'sequelize';
 import { Model } from 'sequelize';
 
 export interface PaginationResult<T> {
@@ -121,7 +121,8 @@ export const generateSequelizeFilter = (filterObject: FilterQueryGenerator) => {
 
 export async function ViewData<T extends Model>(
   model: ModelStatic<T>,
-  filterObject: FilterObject
+  filterObject: FilterObject,
+  includes?: IncludeOptions[]
 ): Promise<PaginationResult<T>> {
   const { filter, skip, take, fields, exclude, sort } = filterObject;
   const sequelizeFilter = generateSequelizeFilter(filter);
@@ -142,19 +143,17 @@ export async function ViewData<T extends Model>(
   // Opsi query Sequelize
   const options: FindOptions<T> = {
     where: sequelizeFilter,
+    include: includes!,
+    attributes: includedFields,
+    order,
     limit: take,
     offset: skip,
-    attributes: includedFields, // Menentukan field yang akan ditampilkan
-    order, // Menambahkan opsi sorting
   };
 
-  // Query untuk mendapatkan data dan jumlah total
   const result = await model.findAndCountAll(options);
 
-  // Menghitung total halaman
   const totalPages = Math.ceil(result.count / take);
 
-  // Menyiapkan objek pagination
   const pagination = {
     totalItems: result.count,
     currentPage: Math.floor(skip / take) + 1,

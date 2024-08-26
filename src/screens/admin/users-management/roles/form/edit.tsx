@@ -46,7 +46,6 @@ const EditRole = () => {
   })
 
   useEffect(() => {
-    console.log("gridTableMuiContext.rowSelected", gridTableMuiContext.rowSelected)
     if(Object.keys(gridTableMuiContext.rowSelected).length > 0){
       const row = gridTableMuiContext.rowSelected as RoleAttributes
       formik.setValues({

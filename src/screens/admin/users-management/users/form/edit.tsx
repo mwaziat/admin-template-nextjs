@@ -1,20 +1,18 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client'
-import { Box, Grid, TextField, FormControl, InputLabel, Select, MenuItem, FormHelperText, Button, Autocomplete } from '@mui/material'
+import { Box, Grid, TextField, Button, Autocomplete } from '@mui/material'
 import React, { useContext, useEffect, useState } from 'react'
 import { useFormik } from 'formik';
 import * as yup from 'yup'
-import { UserContext } from '..';
-import { isEmailValidator } from '@/utils/validateEmail';
 import { ToastSuccess, ToastWarning } from '@/utils/toastAlert';
-import { ToolbarAddContext } from '@/components/table/DataTables/CustomToolbarAdd';
-import { CreateData, ViewDataRoles } from '../queries';
-import { RoleAttributes } from '@/types/roles';
+import { UpdateData, ViewDataRoles } from '../queries';
 import { GridTableMuiContext } from '@/components/table/GridTableMui';
+import { RoleAttributes } from '@/types/roles';
+import { isEmailValidator } from '@/utils/validateEmail';
+import { UserAttributes } from '@/types/users';
 
-const AddUser = () => {
-  const toolbarAddContext = useContext(ToolbarAddContext)
+const EditUser = () => {
   const gridTableMuiContext = useContext(GridTableMuiContext)
-  const userContext = useContext(UserContext)
   const [roles, setRoles] = useState<{id: number, label: string}[]>([])
 
   const validationSchema = yup.object({
@@ -38,14 +36,12 @@ const AddUser = () => {
     password: yup
       .string()
       .min(6, 'Password must be at least 6 characters')
-      .required('Password is Required')
       .matches(
         /^(?=.*[a-z])(?=.*[0-9])(?=.{6,})/,
         'Must have at least one letter and one number'
       ),
     confirm_password: yup
       .string()
-      .required('Confirm Password is Required')
       .oneOf([yup.ref('password')], 'Confirm password must match the password'),
     phone: yup
       .string(),
@@ -59,6 +55,7 @@ const AddUser = () => {
 
   const formik = useFormik({
     initialValues: {
+      id: 0,
       name: '',
       firstName: '',
       lastName: '',
@@ -75,19 +72,13 @@ const AddUser = () => {
     validationSchema: validationSchema,
     enableReinitialize: true,
     onSubmit: async (values, actions) => {
-      const parsedRoles = values.roles.map(role => role.id);
-      
-      const submissionData = {
-        ...values,
-        roles: parsedRoles,
-      };
       try {
-        const res = await CreateData(submissionData)
+        const res = await UpdateData(values)
         if(res.status && res.data !== undefined){
-          ToastSuccess('Success Create data')
+          ToastSuccess('Success update data')
           actions.resetForm()
-          toolbarAddContext.setOpen(!toolbarAddContext.open)
           gridTableMuiContext.setRefreshServerSide(true)
+          gridTableMuiContext.setOpenModalEdit(false)
         } else {
           ToastWarning(res.error)
         }
@@ -96,6 +87,30 @@ const AddUser = () => {
       }
     }
   })
+
+  useEffect(() => {
+    if(Object.keys(gridTableMuiContext.rowSelected).length > 0){
+      const row = gridTableMuiContext.rowSelected as UserAttributes
+      const roleFormatted =  row.roles && Array.isArray(row.roles) ? row.roles.map((item) => {
+        return {
+          id: item.id,
+          label: item.name
+        }
+      }): []
+      formik.setValues((prev) => ({
+        ...prev,
+        id: row.id,
+        name: row.name,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        username: row.username,
+        email: row.email,
+        phone: row.phone,
+        address: row.address,
+        roles: roleFormatted
+      }))
+    }
+  }, [gridTableMuiContext.rowSelected])
 
   const fetchDataRoles = async () => {
     try {
@@ -318,4 +333,4 @@ const AddUser = () => {
   )
 }
 
-export default AddUser
+export default EditUser

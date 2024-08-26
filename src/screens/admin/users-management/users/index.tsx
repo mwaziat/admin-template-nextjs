@@ -3,6 +3,10 @@ import GridTableMui from '@/components/table/GridTableMui';
 import React, { createContext, useEffect, useState } from 'react'
 import AddUser from './form/add';
 import { UserColumns } from '@/utils/columns/users-management/user';
+import { DeleteConfirm } from '@/utils/sweet-alert';
+import { UserAttributes } from '@/types/users';
+import { DeleteData, DeleteManyData } from './queries';
+import EditUser from './form/edit';
 
 interface UserContextType {
   fetchData: () => void;
@@ -14,6 +18,7 @@ export const UserContext = createContext<UserContextType>({
 
 const Users = () => {
   const [data, setData] = useState<any>([])
+  const [isReloadServer, setIsReloadServer] = useState(false)
 
   useEffect(() => {
     fetchData();
@@ -27,6 +32,45 @@ const Users = () => {
     }
   };
 
+  const handleDelete = async (row: UserAttributes) => {
+    try {
+      const response = await DeleteData(row)
+
+      if(response.status){
+        setIsReloadServer(true)
+        setTimeout(() => {
+          setIsReloadServer(false)
+        }, 100)
+        return true
+      } else {
+        return false
+      }
+    } catch (error) {
+      console.error("Error deleting:", error);
+      return false;
+    }
+  }
+
+  const handleDeleteMany = async (ids: number[]) => {
+    try {
+      const response = await DeleteManyData({ids: ids})
+
+      if(response.status){
+        setIsReloadServer(true)
+        setTimeout(() => {
+          setIsReloadServer(false)
+        }, 100)
+        return true
+      } else {
+        return false
+      }
+    } catch (error) {
+      console.error("Error deleting:", error);
+      return false;
+    }
+  }
+
+
 
   return (
     <div>
@@ -36,7 +80,10 @@ const Users = () => {
           serverSide={{
             isActive: true,
             path: `${process.env.NEXT_PUBLIC_API_SERVER!}/users-management/users/view-data`,
-            exclude: ['password']
+            exclude: ['password'],
+            defaultFilters: [
+              {field: 'deleted_at', op: 'IS NULL', value: 'null', type: 'string'}
+            ]
           }}
           columns={UserColumns()}
           toolbarAdd={{
@@ -50,16 +97,19 @@ const Users = () => {
           toolbarFilter={{ isActive: true }}
           toolbarRefresh={{ isActive: true }}
           checkboxSelection
-          toolbarDeleteMany={{ isActive: true, handleClick: () => console.log("Delete") }}
+          isReload={isReloadServer}
+          toolbarDeleteMany={{ isActive: true, onDeleteClick: (data: number[]) => handleDeleteMany(data) }}
           defaultColumnsAction={{
             isActive: true,
             isShowEditButton: true,
             isModalEdit: true,
             editModalDetails: {
               title: 'Edit User',
-              maxWidth: 'xl'
+              maxWidth: 'md'
             },
-            editModalComponent: (props) => <p>Test</p>
+            editModalComponent: (props) => <EditUser />,
+            isShowDeleteButton: true,
+            onDeleteClick: (row: UserAttributes) => DeleteConfirm('Delete Data User', () => handleDelete(row))
           }}
         />
       </UserContext.Provider>

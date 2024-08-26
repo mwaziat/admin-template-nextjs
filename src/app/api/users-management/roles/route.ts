@@ -11,7 +11,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const rows = await Roles.findAll()
+    const rows = await Roles.findAll({
+      where: {
+        deletedAt: {
+          [Op.is]: literal('null'),
+        },
+      }
+    })
     if(rows.length > 0){
       return NextResponse.json({status: 1, message: "Data found", data: rows}) 
     } else {
@@ -30,7 +36,7 @@ export async function POST(req: NextRequest) {
   try {
     const session: UserAttributes = await getUserAuth(req)
     const data: RoleCreateAttributes = await req.json();
-    console.log('data', data)
+    
     const row = await Roles.create(
       {...data, createdBy: session.id, updatedBy: session.id},
       {transaction}
