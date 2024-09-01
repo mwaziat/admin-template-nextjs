@@ -25,4 +25,7 @@ export interface UserCreateAttributes
   }
 
 export interface UserUpdateAttributes
-  extends Partial<Omit<UserAttributes, 'id'>> {}
+  extends Partial<Omit<UserAttributes, 'id' | 'roles'>> {
+    roles: number[];
+    password?: string;
+  }

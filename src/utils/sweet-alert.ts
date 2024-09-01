@@ -15,13 +15,13 @@ export const DeleteConfirm = (message: string, onDelete: () => Promise<boolean>)
         if (success) {
           Swal.fire({
             title: "Deleted!",
-            text: "Your file has been deleted.",
+            text: "Your data has been deleted.",
             icon: "success"
           });
         } else {
           Swal.fire({
             title: "Failed!",
-            text: "There was an error deleting your file.",
+            text: "There was an error deleting your data.",
             icon: "error"
           });
         }

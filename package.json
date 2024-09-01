@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "dotenv next dev",
+    "dev": "dotenv next dev --turbo",
     "build": "next build",
     "start": "dotenv next start",
     "lint": "next lint",

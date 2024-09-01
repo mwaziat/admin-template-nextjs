@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 // import 'react-toastify/dist/ReactToastify.css';
 import "@/utils/assets/css/globals.css";
-import Providers from "./providers";
+import dynamic from "next/dynamic";
+// import Providers from "./providers";
+import BackdropCircularProgress from './../components/loading/backdrop-circular-progress';
+
+const Providers = dynamic(() => import("./providers"), {
+  ssr: false,
+  loading: () => <BackdropCircularProgress />,
+});
 
 const inter = Inter({ subsets: ["latin"] });
 

@@ -34,12 +34,7 @@ const EditUser = () => {
       .required('Email is Required')
       .test("is-valid", (message: any) => `${message.path} not valid`, (value: any) => value ? isEmailValidator(value) : new yup.ValidationError("Invalid value")),
     password: yup
-      .string()
-      .min(6, 'Password must be at least 6 characters')
-      .matches(
-        /^(?=.*[a-z])(?=.*[0-9])(?=.{6,})/,
-        'Must have at least one letter and one number'
-      ),
+      .string(),
     confirm_password: yup
       .string()
       .oneOf([yup.ref('password')], 'Confirm password must match the password'),
@@ -73,7 +68,13 @@ const EditUser = () => {
     enableReinitialize: true,
     onSubmit: async (values, actions) => {
       try {
-        const res = await UpdateData(values)
+        const parsedRoles = values.roles.map(role => role.id);
+      
+        const submissionData = {
+          ...values,
+          roles: parsedRoles,
+        };
+        const res = await UpdateData(submissionData)
         if(res.status && res.data !== undefined){
           ToastSuccess('Success update data')
           actions.resetForm()
@@ -220,6 +221,9 @@ const EditUser = () => {
             value={formik.values.roles}
             onChange={(event, value) => {
               formik.setFieldValue('roles', value);
+            }}
+            isOptionEqualToValue={(option, newValue) => {
+              return option.id === newValue.id;
             }}
             renderInput={(params) => (
               <TextField

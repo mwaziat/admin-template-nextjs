@@ -2,7 +2,7 @@
 
 import { RoleAttributes } from "@/types/roles";
 import { UserAttributes } from "@/types/users";
-import { GET, POST, PATCH, DELETE } from "@/utils/services/fetch";
+import { GET, POST, PUT, PATCH, DELETE } from "@/utils/services/fetch";
 
 export const ViewDataUsers = async (): Promise<{ status: boolean, error: any, data: UserAttributes[] | undefined }> => {
 	return await GET(`${process.env.NEXT_PUBLIC_API_SERVER!}/users-management/users`)
@@ -49,7 +49,7 @@ export const CreateData = async (data: any): Promise<{ status: boolean, error: a
 }
 
 export const UpdateData = async (data: any): Promise<{ status: boolean, error: any, data: any }> => {
-	return await PATCH(`${process.env.NEXT_PUBLIC_API_SERVER!}/users-management/users/${data.id!}`, data)
+	return await PUT(`${process.env.NEXT_PUBLIC_API_SERVER!}/users-management/users`, data)
 		.then((res) => {
 			console.log("res", res);
 			return { status: true, error: null, data: res };

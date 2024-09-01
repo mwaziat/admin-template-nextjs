@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
           createdAt: new Date(),
           updatedAt: new Date()
         }));
-        console.log("userRoles", userRoles)
+        
         await UsersRoles.bulkCreate(userRoles, { transaction });
       }
       await transaction.commit();
@@ -82,9 +82,12 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const transaction = await sequelize.transaction();
+
   try {
-    const data: UserUpdateAttributes & { id: number } = await req.json();
-    const { id, ...updateData } = data;
+    const session: UserAttributes = await getUserAuth(req); 
+    const data: UserUpdateAttributes & { id: number, roles?: number[] } = await req.json();
+    const { id, roles, password, ...updateData } = data;
 
     const row = await Users.findByPk(id);
 
@@ -92,14 +95,43 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ status: 0, message: "Data not found" });
     }
 
-    await row.update(updateData);
-
-    return NextResponse.json({status: 1, message: "Data found", data: row}) 
-  } catch (error) {
-    if (error !== null && error instanceof Error) {
-      return NextResponse.json({status: 0, message: JSON.stringify(error.message)})
+    if (password) {
+      const hashedPassword = await hashPassword(password);
+      (updateData as any).password = hashedPassword;
     }
-    return NextResponse.json({status: 0, message: 'Unhandled Error'})
+
+    await row.update(
+      { ...updateData, updatedBy: session.id, updatedAt: new Date() },
+      { transaction }
+    );
+
+    await UsersRoles.destroy({
+      where: { userId: id },
+      transaction,
+    });
+
+    // Tambahkan role baru jika ada
+    if (roles && Array.isArray(roles)) {
+      const userRoles = roles.map((roleId) => ({
+        userId: row.id,
+        roleId: roleId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: session.id,
+        updatedBy: session.id
+      }));
+
+      await UsersRoles.bulkCreate(userRoles, { transaction });
+    }
+
+    await transaction.commit();
+    return NextResponse.json({ status: 1, message: "Data updated successfully", data: row });
+  } catch (error) {
+    await transaction.rollback();
+    if (error !== null && error instanceof Error) {
+      return NextResponse.json({ status: 0, message: JSON.stringify(error.message) });
+    }
+    return NextResponse.json({ status: 0, message: 'Unhandled Error' });
   }
 }
 
